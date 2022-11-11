@@ -2,7 +2,7 @@ module github.com/sandwich-go/siid
 
 go 1.16
 
-replace github.com/sandwich-go/boost => ../../../zhongtai/boost
+//replace github.com/sandwich-go/boost => ../../../zhongtai/boost
 
 require (
 	github.com/prometheus/client_golang v1.14.0
