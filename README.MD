@@ -14,6 +14,30 @@
 - 每次根据ID段生成一段连续的ID置于内存中，来保证高性能
 - 当ID达到`RenewPercent`百分比时，会启动新协程从驱动中获取新的ID段，来避免造成业务卡顿
 
+## 性能测试
+```shell
+Benchmark Results
+With Go 1.13.4 darwin/amd64 on a 2.2 GHz Intel Core i7 16GB. Like all benchmarks, take these with a grain of salt.
+
+goos: darwin
+goarch: amd64
+pkg: bitbucket.org/funplus/siid/bentch
+BenchmarkSIID_Mongo-12      46535821            25.4 ns/op         0 B/op          0 allocs/op
+BenchmarkSIID_MySQL-12      40794764            27.4 ns/op         0 B/op          0 allocs/op
+BenchmarkRand-12            92630166            12.9 ns/op         0 B/op          0 allocs/op
+BenchmarkTimestamp-12       17214086            69.3 ns/op         0 B/op          0 allocs/op
+BenchmarkUUID_V1-12         11488557           107 ns/op           0 B/op          0 allocs/op
+BenchmarkUUID_V2-12         11898156           101 ns/op           0 B/op          0 allocs/op
+BenchmarkUUID_V3-12          5220328           229 ns/op         144 B/op          4 allocs/op
+BenchmarkUUID_V4-12         15463155            76.4 ns/op        16 B/op          1 allocs/op
+BenchmarkUUID_V5-12          4481305           271 ns/op         176 B/op          4 allocs/op
+BenchmarkSnowflake-12        4928191           244 ns/op           0 B/op          0 allocs/op
+PASS
+ok      bitbucket.org/funplus/siid/bentch   14.801s
+```
+- `SIID`是全局唯一的数字ID生成方案，并不是`UUID`的替代品
+- `SIID`整体性能数据较`UUID V5`要快10倍左右,较`Snowflake`方案快10倍左右。
+
 ## 使用方式
 ```go
 import (
