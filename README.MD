@@ -26,7 +26,7 @@ import (
 
 func main()  {
     const driverName = "mysql"
-	// 注册driver
+    // 注册driver
     dsn := fmt.Sprintf("root:@tcp(%s)/mysql?charset=utf8", "127.0.0.1:3306")
     if db, err0 := sql.Open("mysql", dsn); err0 != nil {
         panic(err0)
@@ -34,7 +34,7 @@ func main()  {
         driver := siid.NewMysqlDriver(db)
         siid.Register(driverName, driver)	
     }   
-	// 创建builder
+    // 创建builder
     b := siid.New(driverName,
         WithOffsetWhenAutoCreateDomain(30000000),
         WithDevelopment(false),
