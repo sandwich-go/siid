@@ -1,4 +1,4 @@
-# siid
+# SIID
 协程安全的整型ID生成器，该ID是全局唯一的，并且是非严格递增的（多协程情况下）。
 
 ## 特性
@@ -57,5 +57,11 @@ func main()  {
         panic(err3)
     }
     fmt.Println("id =>", id)
+
+    id1, err4 := e.Next()
+    if err4 != nil {
+        panic(err4)
+    }
+    fmt.Println("id =>", id1)
 }
 ```
