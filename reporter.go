@@ -17,11 +17,13 @@ func getRenewStatus(err error) string {
 func (e *engine) renewReport(currQuantum uint64, renewBegin time.Time, err error) {
 	if err != nil {
 		_ = e.renewErrCount.Add(1)
-		glog.Error("renew error", glog.Err(err), glog.String("domain", e.domain))
+		glog.Error(w("renew error"), glog.Err(err), glog.String("domain", e.domain))
 	} else {
 		_ = e.renewCount.Add(1)
-		glog.Debug("renew ok", glog.Uint64("nextN", e.nextN),
-			glog.Uint64("quantum", currQuantum), glog.Uint64("nextMax", e.nextMax), glog.String("domain", e.domain))
+		if e.builder.visitor.GetDevelopment() {
+			glog.Debug(w("renew ok"), glog.Uint64("nextN", e.nextN),
+				glog.Uint64("quantum", currQuantum), glog.Uint64("nextMax", e.nextMax), glog.String("domain", e.domain))
+		}
 	}
 	if e.builder.visitor.GetEnableTimeSummary() {
 		_ = monitor.Timing("siid_renew_time", time.Since(renewBegin), prometheus.Labels{"domain": e.domain, "status": getRenewStatus(err)})

@@ -6,8 +6,10 @@ import (
 )
 
 var (
-	ErrReachIdLimitation = errors.New("reach id limit")
-	ErrIdRunOut          = errors.New("id run out")
+	ErrReachIdLimitation    = errors.New("reach id limit")
+	ErrIdRunOut             = errors.New("id run out")
+	ErrorDriverHasClosed    = errors.New("driver has closed")
+	ErrorDriverHasNotInited = errors.New("driver has not inited, call Builder.Prepare first")
 )
 
 type Stats struct {
@@ -18,12 +20,15 @@ type Stats struct {
 }
 
 type Builder interface {
+	// Prepare 负责准备工作，会调用Driver.Prepare函数
+	Prepare(context.Context) error
+
+	// Destroy 销毁，资源的释放，会调用Driver.Destroy函数
+	Destroy(context.Context) error
+
 	// Build 建立Engine（新建或者返回已存在的Engine）
 	// domain 域，每种类型id，都拥有一个固定的域名，例如`player`
-	Build(domain string) Engine
-
-	// Driver 返回当前driver
-	Driver() Driver
+	Build(domain string) (Engine, error)
 }
 
 type Engine interface {
@@ -39,13 +44,10 @@ type Engine interface {
 
 type Driver interface {
 	// Prepare 负责准备工作
-	Prepare() error
+	Prepare(context.Context) error
 
 	// Destroy 销毁，资源的释放
-	Destroy() error
-
-	// Ping 探测driver联通性
-	Ping(context.Context) error
+	Destroy(context.Context) error
 
 	// Renew 创建新的一段id
 	// domain 域，每种类型id，都拥有一个固定的域名，例如`player`

@@ -25,6 +25,7 @@ type Options struct {
 	EnableSlow                 bool                `xconf:"enable_slow" usage:"是否开启慢日志"`
 	SlowQuery                  time.Duration       `xconf:"slow_query" usage:"慢日志最小时长，大于该时长将输出日志"`
 	EnableTimeSummary          bool                `xconf:"enable_time_summary" usage:"是否开启Next/MustNext接口的time监控，否则为统计监控"`
+	Development                bool                `xconf:"development" usage:"是否为开发模式"`
 }
 
 // NewConfig new Options
@@ -171,6 +172,15 @@ func WithEnableTimeSummary(v bool) Option {
 	}
 }
 
+// WithDevelopment 是否为开发模式
+func WithDevelopment(v bool) Option {
+	return func(cc *Options) Option {
+		previous := cc.Development
+		cc.Development = v
+		return WithDevelopment(previous)
+	}
+}
+
 // InstallOptionsWatchDog the installed func will called when NewConfig  called
 func InstallOptionsWatchDog(dog func(cc *Options)) { watchDogOptions = dog }
 
@@ -195,6 +205,7 @@ func newDefaultOptions() *Options {
 		WithEnableSlow(true),
 		WithSlowQuery(30 * time.Millisecond),
 		WithEnableTimeSummary(false),
+		WithDevelopment(true),
 	} {
 		opt(cc)
 	}
@@ -255,6 +266,7 @@ func (cc *Options) GetInitialQuantum() uint64               { return cc.InitialQ
 func (cc *Options) GetEnableSlow() bool                     { return cc.EnableSlow }
 func (cc *Options) GetSlowQuery() time.Duration             { return cc.SlowQuery }
 func (cc *Options) GetEnableTimeSummary() bool              { return cc.EnableTimeSummary }
+func (cc *Options) GetDevelopment() bool                    { return cc.Development }
 
 // OptionsVisitor visitor interface for Options
 type OptionsVisitor interface {
@@ -271,6 +283,7 @@ type OptionsVisitor interface {
 	GetEnableSlow() bool
 	GetSlowQuery() time.Duration
 	GetEnableTimeSummary() bool
+	GetDevelopment() bool
 }
 
 // OptionsInterface visitor + ApplyOption interface for Options

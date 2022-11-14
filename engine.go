@@ -12,7 +12,9 @@ import (
 )
 
 const (
-	tag = "siid"
+	driverFlagInit   int32 = iota // driver还未初始化
+	driverFlagInited              // driver已初始化
+	driverFlagClosed              // driver已关闭
 )
 
 var (
@@ -21,7 +23,10 @@ var (
 	// nowFunc returns the current time
 	nowFunc                     = time.Now
 	segmentFactor time.Duration = 2
+	errDomainLost               = errors.New("lost domain")
 )
+
+const tag = "siid"
 
 func w(msg string) string {
 	return fmt.Sprintf("[%s]: %s", tag, msg)
@@ -64,6 +69,7 @@ type builder struct {
 	driver        Driver
 	visitor       OptionsVisitor
 	engineGetters *sync.Map
+	flag          xsync.AtomicInt32
 }
 
 func New(driverName string, opts ...Option) Builder {
@@ -103,11 +109,39 @@ func (b *builder) getEngineGetterByDomain(domain string) engineGetter {
 	return getter
 }
 
-func (b *builder) Build(domain string) Engine {
-	return b.getEngineGetterByDomain(domain)()
+func (b *builder) checkAvailableFlag() error {
+	switch b.flag.Get() {
+	case driverFlagInit:
+		return ErrorDriverHasNotInited
+	case driverFlagClosed:
+		return ErrorDriverHasClosed
+	}
+	return nil
 }
 
-func (b *builder) Driver() Driver { return b.driver }
+func (b *builder) Build(domain string) (Engine, error) {
+	if err := b.checkAvailableFlag(); err != nil {
+		return nil, err
+	}
+	return b.getEngineGetterByDomain(domain)(), nil
+}
+
+func (b *builder) Prepare(ctx context.Context) error {
+	if b.flag.CompareAndSwap(driverFlagInit, driverFlagInited) {
+		return b.driver.Prepare(ctx)
+	}
+	if b.flag.Get() == driverFlagInited {
+		return nil
+	}
+	return ErrorDriverHasClosed
+}
+
+func (b *builder) Destroy(ctx context.Context) error {
+	if b.flag.CompareAndSwap(driverFlagInited, driverFlagClosed) {
+		return b.driver.Destroy(ctx)
+	}
+	return b.checkAvailableFlag()
+}
 
 type engine struct {
 	builder *builder
@@ -237,7 +271,7 @@ func (e *engine) renewWithUnlock() {
 	e.postRenew(quantum, begin, retry(func(attempt int) (bool, error) {
 		defer func() {
 			if r := recover(); r != nil {
-				glog.Error(w(" renew panic"), glog.Int("attempt", attempt), glog.String("domain", e.domain),
+				glog.Error(w("renew panic"), glog.Int("attempt", attempt), glog.String("domain", e.domain),
 					glog.Any("recover", r))
 			}
 		}()
