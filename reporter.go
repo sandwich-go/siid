@@ -38,7 +38,7 @@ func (e *engine) nextReport(n int, nextBegin time.Time, _ error) {
 		_ = monitor.Count("siid_next", int64(n), prometheus.Labels{"domain": e.domain})
 	}
 	if e.builder.visitor.GetEnableSlow() && cost >= e.builder.visitor.GetSlowQuery() {
-		glog.Warn(w("next slow query"), glog.Duration("cost", cost), glog.String("domain", e.domain))
+		glog.Warn(w("next slow query"), glog.Duration("cost", cost), glog.String("domain", e.domain), glog.Int("count", n))
 	}
 }
 
