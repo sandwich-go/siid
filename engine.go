@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/sandwich-go/boost/xsync"
+	"github.com/sandwich-go/boost/z"
 	"github.com/sandwich-go/logbus/glog"
 	"sort"
 	"sync"
@@ -151,7 +152,7 @@ type engine struct {
 	n        uint64 // 当前值
 	max      uint64
 	quantum  uint64
-	ts       time.Time
+	ts       z.MonoTimeDuration
 	critical uint64
 
 	// next
@@ -186,7 +187,7 @@ func (e *engine) NextN(n int) (uint64, error) {
 	if n <= 0 {
 		n = 1
 	}
-	now := nowFunc()
+	now := z.MonoOffset()
 	// lock-free swap current and next ID bucket if we really really really really really need that
 	e.nextMutex.Lock()
 	var err error
@@ -209,11 +210,11 @@ func (e *engine) Stats() Stats {
 	return Stats{Current: e.n, Max: e.max, RenewCount: e.renewCount.Get(), RenewErrCount: e.renewErrCount.Get()}
 }
 
-func nextQuantum(lastQuantum uint64, segmentTime time.Time, segmentDuration time.Duration, minQuantum, maxQuantum uint64) uint64 {
+func nextQuantum(lastQuantum uint64, segmentTime z.MonoTimeDuration, segmentDuration time.Duration, minQuantum, maxQuantum uint64) uint64 {
 	nq := lastQuantum
 	// 第一次renew使用初始值，不进行流控
-	if !segmentTime.IsZero() {
-		duration := time.Since(segmentTime)
+	if segmentTime > 0 {
+		duration := z.MonoSince(segmentTime)
 		if duration < segmentDuration {
 			// 流量增长期
 			nq *= 2
@@ -251,8 +252,8 @@ func retry(fn func(attempt int) (retry bool, err error)) error {
 	return err
 }
 
-func (e *engine) preRenew() (quantum uint64, begin time.Time) {
-	begin = nowFunc()
+func (e *engine) preRenew() (quantum uint64, begin z.MonoTimeDuration) {
+	begin = z.MonoOffset()
 	quantum = nextQuantum(e.quantum, e.ts,
 		e.builder.visitor.GetSegmentDuration(),
 		e.builder.visitor.GetMinQuantum(),
@@ -261,7 +262,7 @@ func (e *engine) preRenew() (quantum uint64, begin time.Time) {
 	return
 }
 
-func (e *engine) postRenew(quantum uint64, begin time.Time, err error) {
+func (e *engine) postRenew(quantum uint64, begin z.MonoTimeDuration, err error) {
 	e.renewReport(quantum, begin, err)
 }
 
@@ -313,7 +314,7 @@ func (e *engine) nextOne() (uint64, error) {
 		e.quantum = e.nextQuantum
 		e.useNewQuantumReport()
 		// 记录号段正式投入使用的时间点
-		e.ts = nowFunc()
+		e.ts = z.MonoOffset()
 		// 计算renew临界值critical,renewCount不能为0,否则无法触发renew机制
 		renewCount := (e.max - e.n) * uint64(e.builder.visitor.GetRenewPercent()) / 100
 		if renewCount == 0 {

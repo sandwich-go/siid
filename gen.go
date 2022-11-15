@@ -33,5 +33,6 @@ func OptionsOptionDeclareWithDefault() interface{} {
 		"SlowQuery":                  time.Duration(30 * time.Millisecond),            // @MethodComment(慢日志最小时长，大于该时长将输出日志)
 		"EnableTimeSummary":          false,                                           // @MethodComment(是否开启Next/MustNext接口的time监控，否则为统计监控)
 		"Development":                true,                                            // @MethodComment(是否为开发模式)
+		"EnableMonitor":              true,                                            // @MethodComment(是否开启监控)
 	}
 }

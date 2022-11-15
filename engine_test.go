@@ -2,6 +2,7 @@ package siid
 
 import (
 	"context"
+	"github.com/sandwich-go/boost/z"
 	. "github.com/smartystreets/goconvey/convey"
 	"sync"
 	"testing"
@@ -14,9 +15,9 @@ func TestNextQuantum(t *testing.T) {
 	Convey("next quantum", t, func() {
 		var initQuantum, minQuantum, maxQuantum uint64 = 20, 10, 40
 		var segmentDuration = 100 * time.Millisecond
-		var quantum = nextQuantum(initQuantum, time.Time{}, segmentDuration, minQuantum, maxQuantum)
+		var quantum = nextQuantum(initQuantum, 0, segmentDuration, minQuantum, maxQuantum)
 		So(quantum, ShouldEqual, initQuantum)
-		var segmentTime = nowFunc()
+		var segmentTime = z.MonoOffset()
 		quantum = nextQuantum(quantum, segmentTime, segmentDuration, minQuantum, maxQuantum)
 		So(quantum, ShouldEqual, maxQuantum)
 		time.Sleep(segmentDuration * segmentFactor)

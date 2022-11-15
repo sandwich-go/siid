@@ -2,9 +2,9 @@ package siid
 
 import (
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/sandwich-go/boost/z"
 	"github.com/sandwich-go/logbus/glog"
 	"github.com/sandwich-go/logbus/monitor"
-	"time"
 )
 
 func getRenewStatus(err error) string {
@@ -14,7 +14,10 @@ func getRenewStatus(err error) string {
 	return "ok"
 }
 
-func (e *engine) renewReport(currQuantum uint64, renewBegin time.Time, err error) {
+func (e *engine) renewReport(currQuantum uint64, renewBegin z.MonoTimeDuration, err error) {
+	if !e.builder.visitor.GetEnableMonitor() {
+		return
+	}
 	if err != nil {
 		_ = e.renewErrCount.Add(1)
 		glog.Error(w("renew error"), glog.Err(err), glog.String("domain", e.domain))
@@ -26,14 +29,17 @@ func (e *engine) renewReport(currQuantum uint64, renewBegin time.Time, err error
 		}
 	}
 	if e.builder.visitor.GetEnableTimeSummary() {
-		_ = monitor.Timing("siid_renew_time", time.Since(renewBegin), prometheus.Labels{"domain": e.domain, "status": getRenewStatus(err)})
+		_ = monitor.Timing("siid_renew_time", z.MonoSince(renewBegin), prometheus.Labels{"domain": e.domain, "status": getRenewStatus(err)})
 	} else {
 		_ = monitor.Count("siid_renew", 1, prometheus.Labels{"domain": e.domain, "status": getRenewStatus(err)})
 	}
 }
 
-func (e *engine) nextReport(n int, nextBegin time.Time, _ error) {
-	cost := time.Since(nextBegin)
+func (e *engine) nextReport(n int, nextBegin z.MonoTimeDuration, _ error) {
+	if !e.builder.visitor.GetEnableMonitor() {
+		return
+	}
+	cost := z.MonoSince(nextBegin)
 	if e.builder.visitor.GetEnableTimeSummary() {
 		_ = monitor.Timing("siid_next_time", cost, prometheus.Labels{"domain": e.domain})
 	} else {
@@ -45,11 +51,17 @@ func (e *engine) nextReport(n int, nextBegin time.Time, _ error) {
 }
 
 func (e *engine) useNewQuantumReport() {
+	if !e.builder.visitor.GetEnableMonitor() {
+		return
+	}
 	pl := prometheus.Labels{"domain": e.domain}
 	_ = monitor.Gauge("siid_quantum", float64(e.quantum), pl)
 	_ = monitor.Gauge("siid_max", float64(e.max), pl)
 }
 
 func (e *engine) leftReport() {
+	if !e.builder.visitor.GetEnableMonitor() {
+		return
+	}
 	_ = monitor.Gauge("siid_n_left", float64(e.builder.visitor.GetLimitation()-e.n), prometheus.Labels{"domain": e.domain})
 }

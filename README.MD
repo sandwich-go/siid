@@ -17,26 +17,25 @@
 ## 性能测试
 ```shell
 Benchmark Results
-With Go 1.13.4 darwin/amd64 on a 2.2 GHz Intel Core i7 16GB. Like all benchmarks, take these with a grain of salt.
 
 goos: darwin
 goarch: amd64
-pkg: bitbucket.org/funplus/siid/bentch
-BenchmarkSIID_Mongo-12      46535821            25.4 ns/op         0 B/op          0 allocs/op
-BenchmarkSIID_MySQL-12      40794764            27.4 ns/op         0 B/op          0 allocs/op
-BenchmarkRand-12            92630166            12.9 ns/op         0 B/op          0 allocs/op
-BenchmarkTimestamp-12       17214086            69.3 ns/op         0 B/op          0 allocs/op
-BenchmarkUUID_V1-12         11488557           107 ns/op           0 B/op          0 allocs/op
-BenchmarkUUID_V2-12         11898156           101 ns/op           0 B/op          0 allocs/op
-BenchmarkUUID_V3-12          5220328           229 ns/op         144 B/op          4 allocs/op
-BenchmarkUUID_V4-12         15463155            76.4 ns/op        16 B/op          1 allocs/op
-BenchmarkUUID_V5-12          4481305           271 ns/op         176 B/op          4 allocs/op
-BenchmarkSnowflake-12        4928191           244 ns/op           0 B/op          0 allocs/op
+pkg: github.com/sandwich-go/siid
+cpu: Intel(R) Core(TM) i9-9880H CPU @ 2.30GHz
+BenchmarkSIID_MySQL
+BenchmarkSIID_MySQL-16    	16460401	        63.43 ns/op	       0 B/op	       0 allocs/op
+BenchmarkRand-16          	92374222	        12.26 ns/op	       0 B/op	       0 allocs/op
+BenchmarkTimestamp-16     	17644713	        65.97 ns/op	       0 B/op	       0 allocs/op
+BenchmarkUUID_V1-16       	12334704	        97.00 ns/op	       0 B/op	       0 allocs/op
+BenchmarkUUID_V2-16       	12190599	        97.27 ns/op	       0 B/op	       0 allocs/op
+BenchmarkUUID_V3-16       	 5514180	       216.7 ns/op	     144 B/op	       4 allocs/op
+BenchmarkUUID_V4-16       	 1595637	       729.5 ns/op	      16 B/op	       1 allocs/op
+BenchmarkUUID_V5-16       	 4900987	       249.4 ns/op	     168 B/op	       4 allocs/op
+BenchmarkSnowflake-16     	 4931772	       244.1 ns/op	       0 B/op	       0 allocs/op
 PASS
-ok      bitbucket.org/funplus/siid/bentch   14.801s
 ```
 - `SIID`是全局唯一的数字ID生成方案，并不是`UUID`的替代品
-- `SIID`整体性能数据较`UUID V5`要快10倍左右,较`Snowflake`方案快10倍左右。
+- `SIID`整体性能数据较`UUID V5`要快4倍左右,较`Snowflake`方案快4倍左右。
 
 ## 使用方式
 ```go
