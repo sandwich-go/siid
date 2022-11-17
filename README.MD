@@ -1,8 +1,8 @@
 # SIID
-Concurrency-safe integer ID generator, which is globally unique and non-strictly incremental (in the case of multiple concurrent processes).
+Fast, thread-safe Integer ID generator in Golang, which is globally unique and non-strictly incremental (in the case of multiple concurrent processes).
 
 ## Features
-- Goroutine safe
+- Thread safe
 - Generate globally unique integer ID, no duplicate ID
 - IDs are non-strictly incremental in a multi-processes environment
 - IDs do not interfere with each other on different `domains`
@@ -40,7 +40,7 @@ BenchmarkSnowflake-16     	 4931772	       244.1 ns/op	       0 B/op	       0 al
 PASS
 ```
 - `SIID` is a globally unique integer ID generation solution and is not a replacement for `UUID`
-- `SIID` are about 4 times faster than those of `UUUID V5` and about 4 times faster than those of the `Snowflake` solution.
+- `SIID` are about 4 times faster than those of [UUUID V5](https://github.com/satori/go.uuid) and about 4 times faster than those of the [Snowflake](https://github.com/bwmarrin/snowflake) solution.
 
 ## UseCase
 ```go

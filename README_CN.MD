@@ -40,7 +40,7 @@ BenchmarkSnowflake-16     	 4931772	       244.1 ns/op	       0 B/op	       0 al
 PASS
 ```
 - `SIID`是全局唯一的数字ID生成方案，并不是`UUID`的替代品
-- `SIID`整体性能数据较`UUID V5`要快4倍左右,较`Snowflake`方案快4倍左右。
+- `SIID`整体性能数据较[UUUID V5](https://github.com/satori/go.uuid)要快4倍左右,较[Snowflake](https://github.com/bwmarrin/snowflake)方案快4倍左右。
 
 ## 使用方式
 ```go
