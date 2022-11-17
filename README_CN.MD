@@ -1,25 +1,25 @@
 # SIID
-Concurrency-safe integer ID generator, which is globally unique and non-strictly incremental (in the case of multiple concurrent processes).
+协程安全的整型ID生成器，该ID是全局唯一的，并且是非严格递增的（多协程情况下）。
 
-## Features
-- Goroutine safe
-- Generate globally unique integer ID, no duplicate ID
-- IDs are non-strictly incremental in a multi-processes environment
-- IDs do not interfere with each other on different `domains`
-- No time dependency, no clock redirection, no ID rewinding
-- Built-in `MySQL` and `Mongo` drivers
-- Implement `Driver` interface, you can implement the new driver
-- Automatic expansion and contraction of ID segments according to the frequency of ID generation, maintain high performance when generation is frequent
-- `MaxQuantum` to avoid wasted segments caused by unexpected crashes
-- Generate a continuous segment of IDs in memory to ensure high performance
-- When the ID reaches the percentage of `RenewPercent`, fork new goroutine to get the next ID segment from the driver to avoid business jams
-- Monitoring `Renew` errors、the number of `Renew` cost or calls、the number of ID generation cost or calls、the current ID segment、the current ID maximum, and the number of remaining IDs
+## 特性
+- 协程安全
+- 能够生成全局唯一的整型ID，不会出现重复的ID
+- 在多协程环境中，ID是非严格递增的
+- 不同的`domain`，ID互不干扰
+- 不依赖时间，无时钟回拨问题，无ID回绕问题
+- 内置`MySQL`、`Mongo`驱动
+- 实现`Driver`定义的接口，可自定义驱动
+- 根据ID生成的频率，自动扩缩ID段，当ID生成频繁时，仍然保持高性能
+- 通过`MaxQuantum`参数避免服务意外崩溃导致的号段浪费
+- 每次根据ID段生成一段连续的ID置于内存中，来保证高性能
+- 当ID达到`RenewPercent`百分比时，会启动新协程从驱动中获取新的ID段，来避免造成业务卡顿
+- 监控`Renew`错误、`Renew`耗时或调用次数、ID生成耗时或调用次数、当前ID段，当前ID最大值以及剩余ID数量
 
-## Links
+## 链接
 * [English](https://github.com/sandwich-go/siid/blob/master/README.MD)
 * [中文文档](https://github.com/sandwich-go/siid/blob/master/README_CN.MD)
 
-## Benchmark
+## 性能测试
 ```shell
 Benchmark Results
 
@@ -39,10 +39,10 @@ BenchmarkUUID_V5-16       	 4900987	       249.4 ns/op	     168 B/op	       4 al
 BenchmarkSnowflake-16     	 4931772	       244.1 ns/op	       0 B/op	       0 allocs/op
 PASS
 ```
-- `SIID` is a globally unique integer ID generation solution and is not a replacement for `UUID`
-- `SIID` are about 4 times faster than those of `UUUID V5` and about 4 times faster than those of the `Snowflake` solution.
+- `SIID`是全局唯一的数字ID生成方案，并不是`UUID`的替代品
+- `SIID`整体性能数据较`UUID V5`要快4倍左右,较`Snowflake`方案快4倍左右。
 
-## UseCase
+## 使用方式
 ```go
 import (
     "context"
@@ -54,7 +54,7 @@ import (
 
 func main()  {
     const driverName = "mysql"
-    // register driver
+    // 注册driver
     dsn := fmt.Sprintf("root:@tcp(%s)/mysql?charset=utf8", "127.0.0.1:3306")
     if db, err0 := sql.Open("mysql", dsn); err0 != nil {
         panic(err0)
@@ -62,7 +62,7 @@ func main()  {
         driver := siid.NewMysqlDriver(db)
         siid.Register(driverName, driver)	
     }   
-    // create builder
+    // 创建builder
     b := siid.New(driverName,
         WithOffsetWhenAutoCreateDomain(30000000),
         WithDevelopment(false),
@@ -74,7 +74,7 @@ func main()  {
     defer func(){
         _ = b.Destroy(context.Background())
     }() 
-    // use engine, generate id for `domain`
+    // 通过domain对应的engine来生成domain的ID
     var domain = "player"
     e, err2 := b.Build(domain)
     if err2 != nil {
