@@ -74,18 +74,18 @@ type builder struct {
 	flag          xsync.AtomicInt32
 }
 
-func New(driverName string, opts ...Option) Builder {
+func New(driverName string, opts *Options) Builder {
 	driversMu.RLock()
 	driver, ok := drivers[driverName]
 	driversMu.RUnlock()
 	if !ok {
 		panicIfErr(fmt.Errorf("unknown driver %q (forgotten import?)", driverName))
 	}
-	return NewWithDriver(driver, opts...)
+	return NewWithDriver(driver, opts)
 }
 
-func NewWithDriver(driver Driver, opts ...Option) Builder {
-	b := &builder{driver: driver, engineGetters: &sync.Map{}, visitor: NewConfig(opts...)}
+func NewWithDriver(driver Driver, opts *Options) Builder {
+	b := &builder{driver: driver, engineGetters: &sync.Map{}, visitor: opts}
 	return b
 }
 

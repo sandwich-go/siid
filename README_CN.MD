@@ -63,9 +63,9 @@ func main()  {
         siid.Register(driverName, driver)	
     }   
     // 创建builder
-    b := siid.New(driverName,
+    b := siid.New(driverName, NewConfig(
         WithOffsetWhenAutoCreateDomain(30000000),
-        WithDevelopment(false),
+        WithDevelopment(false)),
     )
     err1 := b.Prepare(context.Background())
     if err1 != nil {
