@@ -7,7 +7,7 @@ import (
 	"github.com/sandwich-go/boost/retry"
 	"github.com/sandwich-go/boost/xsync"
 	"github.com/sandwich-go/boost/z"
-	"github.com/sandwich-go/logbus/glog"
+	"github.com/sandwich-go/logbus"
 	"sort"
 	"sync"
 	"time"
@@ -81,6 +81,10 @@ func New(driverName string, opts ...Option) Builder {
 	if !ok {
 		panicIfErr(fmt.Errorf("unknown driver %q (forgotten import?)", driverName))
 	}
+	return NewWithDriver(driver, opts...)
+}
+
+func NewWithDriver(driver Driver, opts ...Option) Builder {
 	b := &builder{driver: driver, engineGetters: &sync.Map{}, visitor: NewConfig(opts...)}
 	return b
 }
@@ -256,8 +260,8 @@ func (e *engine) renewWithUnlock() {
 	e.postRenew(quantum, begin, retry.Do(func(attempt uint) error {
 		defer func() {
 			if r := recover(); r != nil {
-				glog.Error(w("renew panic"), glog.Uint("attempt", attempt), glog.String("domain", e.domain),
-					glog.Any("recover", r))
+				logbus.Error(w("renew panic"), logbus.Uint("attempt", attempt), logbus.String("domain", e.domain),
+					logbus.Any("recover", r))
 			}
 		}()
 		ctx, cancel := context.WithTimeout(context.Background(), e.builder.visitor.GetRenewTimeout())
@@ -291,7 +295,7 @@ func (e *engine) nextOne() (uint64, error) {
 		e.renewMutex.Lock()
 		defer e.renewMutex.Unlock()
 		if e.nextMax == 0 {
-			glog.Error(w("next failed"), glog.String("reason", "id run out"), glog.String("domain", e.domain))
+			logbus.Error(w("next failed"), logbus.String("reason", "id run out"), logbus.String("domain", e.domain))
 			return 0, ErrIdRunOut
 		}
 		e.n = e.nextN
@@ -311,7 +315,7 @@ func (e *engine) nextOne() (uint64, error) {
 	e.n++
 	e.leftReport()
 	if e.n > e.builder.visitor.GetLimitation() {
-		glog.Error(w("next failed"), glog.String("reason", "max id"), glog.String("domain", e.domain))
+		logbus.Error(w("next failed"), logbus.String("reason", "max id"), logbus.String("domain", e.domain))
 		return 0, ErrReachIdLimitation
 	}
 	return e.n, nil

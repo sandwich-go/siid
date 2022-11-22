@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"github.com/sandwich-go/logbus/glog"
+	"github.com/sandwich-go/logbus"
 	"time"
 )
 
@@ -89,7 +89,7 @@ func (d *mysqlDriver) renew(ctx context.Context, domain string, quantum uint64) 
 		}
 		if err != nil {
 			if err0 := tx.Rollback(); err0 != nil && err0 != sql.ErrTxDone {
-				glog.Error(w("mysql rollback error"), glog.Err(err0))
+				logbus.Error(w("mysql rollback error"), logbus.ErrorField(err0))
 			}
 		}
 	}()

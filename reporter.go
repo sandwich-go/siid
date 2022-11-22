@@ -3,7 +3,7 @@ package siid
 import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sandwich-go/boost/z"
-	"github.com/sandwich-go/logbus/glog"
+	"github.com/sandwich-go/logbus"
 	"github.com/sandwich-go/logbus/monitor"
 )
 
@@ -20,12 +20,12 @@ func (e *engine) renewReport(currQuantum uint64, renewBegin z.MonoTimeDuration, 
 	}
 	if err != nil {
 		_ = e.renewErrCount.Add(1)
-		glog.Error(w("renew error"), glog.Err(err), glog.String("domain", e.domain))
+		logbus.Error(w("renew error"), logbus.ErrorField(err), logbus.String("domain", e.domain))
 	} else {
 		_ = e.renewCount.Add(1)
 		if e.builder.visitor.GetDevelopment() {
-			glog.Debug(w("renew ok"), glog.Uint64("nextN", e.nextN),
-				glog.Uint64("quantum", currQuantum), glog.Uint64("nextMax", e.nextMax), glog.String("domain", e.domain))
+			logbus.Debug(w("renew ok"), logbus.Uint64("nextN", e.nextN),
+				logbus.Uint64("quantum", currQuantum), logbus.Uint64("nextMax", e.nextMax), logbus.String("domain", e.domain))
 		}
 	}
 	if e.builder.visitor.GetEnableTimeSummary() {
@@ -46,7 +46,7 @@ func (e *engine) nextReport(n int, nextBegin z.MonoTimeDuration, _ error) {
 		_ = monitor.Count("siid_next", int64(n), prometheus.Labels{"domain": e.domain})
 	}
 	if e.builder.visitor.GetEnableSlow() && cost >= e.builder.visitor.GetSlowQuery() {
-		glog.Warn(w("next slow query"), glog.Duration("cost", cost), glog.String("domain", e.domain), glog.Int("count", n))
+		logbus.Warn(w("next slow query"), logbus.Duration("cost", cost), logbus.String("domain", e.domain), logbus.Int("count", n))
 	}
 }
 
