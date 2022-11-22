@@ -12,21 +12,21 @@ import (
 
 // Options should use NewConfig to initialize it
 type Options struct {
-	Limitation                 uint64              `xconf:"limitation" usage:"id最大限制，超过该值则会报ErrReachIdLimitation错误"`
-	OffsetWhenAutoCreateDomain uint64              `xconf:"offset_when_auto_create_domain" usage:"当新建新的domain时，偏移多少开始自增，即预留值"`
-	RenewPercent               int                 `xconf:"renew_percent" usage:"renew百分比，当id达到百分比值时，会去server端或db拿新的id段"`
-	RenewRetryDelay            RenewRetryDelayFunc `xconf:"renew_retry_delay" usage:"renew失败重试函数，默认10ms重试一次"`
-	RenewTimeout               time.Duration       `xconf:"renew_timeout" usage:"renew超时"`
-	RenewRetry                 int                 `xconf:"renew_retry" usage:"renew重试次数"`
-	SegmentDuration            time.Duration       `xconf:"segment_duration" usage:"设定segment长度，renew号段尺寸调节的目的是使号段消耗稳定趋于SegmentDuration内。降低SegmentDuration，可以更迅速使缓存的号段达到设定的最大数值以提高吞吐能力"`
-	MinQuantum                 uint64              `xconf:"min_quantum" usage:"根据renew请求频率自动伸缩的请求id缓存段，最小段长"`
-	MaxQuantum                 uint64              `xconf:"max_quantum" usage:"最大段长"`
-	InitialQuantum             uint64              `xconf:"initial_quantum" usage:"初始化段长"`
-	EnableSlow                 bool                `xconf:"enable_slow" usage:"是否开启慢日志"`
-	SlowQuery                  time.Duration       `xconf:"slow_query" usage:"慢日志最小时长，大于该时长将输出日志"`
-	EnableTimeSummary          bool                `xconf:"enable_time_summary" usage:"是否开启Next/MustNext接口的time监控，否则为统计监控"`
-	Development                bool                `xconf:"development" usage:"是否为开发模式"`
-	EnableMonitor              bool                `xconf:"enable_monitor" usage:"是否开启监控"`
+	Limitation                 uint64        `xconf:"limitation" usage:"id最大限制，超过该值则会报ErrReachIdLimitation错误"`
+	OffsetWhenAutoCreateDomain uint64        `xconf:"offset_when_auto_create_domain" usage:"当新建新的domain时，偏移多少开始自增，即预留值"`
+	RenewPercent               int           `xconf:"renew_percent" usage:"renew百分比，当id达到百分比值时，会去server端或db拿新的id段"`
+	RenewTimeout               time.Duration `xconf:"renew_timeout" usage:"renew超时"`
+	RenewRetry                 uint          `xconf:"renew_retry" usage:"renew重试次数"`
+	RenewRetryDelay            time.Duration `xconf:"renew_retry_delay" usage:"renew重试延迟"`
+	SegmentDuration            time.Duration `xconf:"segment_duration" usage:"设定segment长度，renew号段尺寸调节的目的是使号段消耗稳定趋于SegmentDuration内。降低SegmentDuration，可以更迅速使缓存的号段达到设定的最大数值以提高吞吐能力"`
+	MinQuantum                 uint64        `xconf:"min_quantum" usage:"根据renew请求频率自动伸缩的请求id缓存段，最小段长"`
+	MaxQuantum                 uint64        `xconf:"max_quantum" usage:"最大段长"`
+	InitialQuantum             uint64        `xconf:"initial_quantum" usage:"初始化段长"`
+	EnableSlow                 bool          `xconf:"enable_slow" usage:"是否开启慢日志"`
+	SlowQuery                  time.Duration `xconf:"slow_query" usage:"慢日志最小时长，大于该时长将输出日志"`
+	EnableTimeSummary          bool          `xconf:"enable_time_summary" usage:"是否开启Next/MustNext接口的time监控，否则为统计监控"`
+	Development                bool          `xconf:"development" usage:"是否为开发模式"`
+	EnableMonitor              bool          `xconf:"enable_monitor" usage:"是否开启监控"`
 }
 
 // NewConfig new Options
@@ -83,15 +83,6 @@ func WithRenewPercent(v int) Option {
 	}
 }
 
-// WithRenewRetryDelay renew失败重试函数，默认10ms重试一次
-func WithRenewRetryDelay(v RenewRetryDelayFunc) Option {
-	return func(cc *Options) Option {
-		previous := cc.RenewRetryDelay
-		cc.RenewRetryDelay = v
-		return WithRenewRetryDelay(previous)
-	}
-}
-
 // WithRenewTimeout renew超时
 func WithRenewTimeout(v time.Duration) Option {
 	return func(cc *Options) Option {
@@ -102,11 +93,20 @@ func WithRenewTimeout(v time.Duration) Option {
 }
 
 // WithRenewRetry renew重试次数
-func WithRenewRetry(v int) Option {
+func WithRenewRetry(v uint) Option {
 	return func(cc *Options) Option {
 		previous := cc.RenewRetry
 		cc.RenewRetry = v
 		return WithRenewRetry(previous)
+	}
+}
+
+// WithRenewRetryDelay renew重试延迟
+func WithRenewRetryDelay(v time.Duration) Option {
+	return func(cc *Options) Option {
+		previous := cc.RenewRetryDelay
+		cc.RenewRetryDelay = v
+		return WithRenewRetryDelay(previous)
 	}
 }
 
@@ -205,9 +205,9 @@ func newDefaultOptions() *Options {
 		WithLimitation(math.MaxUint64),
 		WithOffsetWhenAutoCreateDomain(30000000),
 		WithRenewPercent(20),
-		WithRenewRetryDelay(defaultRenewRetryDelayFunc),
 		WithRenewTimeout(5 * time.Second),
 		WithRenewRetry(99),
+		WithRenewRetryDelay(10 * time.Millisecond),
 		WithSegmentDuration(900 * time.Second),
 		WithMinQuantum(30),
 		WithMaxQuantum(3000),
@@ -264,30 +264,30 @@ func AtomicOptions() OptionsVisitor {
 }
 
 // all getter func
-func (cc *Options) GetLimitation() uint64                   { return cc.Limitation }
-func (cc *Options) GetOffsetWhenAutoCreateDomain() uint64   { return cc.OffsetWhenAutoCreateDomain }
-func (cc *Options) GetRenewPercent() int                    { return cc.RenewPercent }
-func (cc *Options) GetRenewRetryDelay() RenewRetryDelayFunc { return cc.RenewRetryDelay }
-func (cc *Options) GetRenewTimeout() time.Duration          { return cc.RenewTimeout }
-func (cc *Options) GetRenewRetry() int                      { return cc.RenewRetry }
-func (cc *Options) GetSegmentDuration() time.Duration       { return cc.SegmentDuration }
-func (cc *Options) GetMinQuantum() uint64                   { return cc.MinQuantum }
-func (cc *Options) GetMaxQuantum() uint64                   { return cc.MaxQuantum }
-func (cc *Options) GetInitialQuantum() uint64               { return cc.InitialQuantum }
-func (cc *Options) GetEnableSlow() bool                     { return cc.EnableSlow }
-func (cc *Options) GetSlowQuery() time.Duration             { return cc.SlowQuery }
-func (cc *Options) GetEnableTimeSummary() bool              { return cc.EnableTimeSummary }
-func (cc *Options) GetDevelopment() bool                    { return cc.Development }
-func (cc *Options) GetEnableMonitor() bool                  { return cc.EnableMonitor }
+func (cc *Options) GetLimitation() uint64                 { return cc.Limitation }
+func (cc *Options) GetOffsetWhenAutoCreateDomain() uint64 { return cc.OffsetWhenAutoCreateDomain }
+func (cc *Options) GetRenewPercent() int                  { return cc.RenewPercent }
+func (cc *Options) GetRenewTimeout() time.Duration        { return cc.RenewTimeout }
+func (cc *Options) GetRenewRetry() uint                   { return cc.RenewRetry }
+func (cc *Options) GetRenewRetryDelay() time.Duration     { return cc.RenewRetryDelay }
+func (cc *Options) GetSegmentDuration() time.Duration     { return cc.SegmentDuration }
+func (cc *Options) GetMinQuantum() uint64                 { return cc.MinQuantum }
+func (cc *Options) GetMaxQuantum() uint64                 { return cc.MaxQuantum }
+func (cc *Options) GetInitialQuantum() uint64             { return cc.InitialQuantum }
+func (cc *Options) GetEnableSlow() bool                   { return cc.EnableSlow }
+func (cc *Options) GetSlowQuery() time.Duration           { return cc.SlowQuery }
+func (cc *Options) GetEnableTimeSummary() bool            { return cc.EnableTimeSummary }
+func (cc *Options) GetDevelopment() bool                  { return cc.Development }
+func (cc *Options) GetEnableMonitor() bool                { return cc.EnableMonitor }
 
 // OptionsVisitor visitor interface for Options
 type OptionsVisitor interface {
 	GetLimitation() uint64
 	GetOffsetWhenAutoCreateDomain() uint64
 	GetRenewPercent() int
-	GetRenewRetryDelay() RenewRetryDelayFunc
 	GetRenewTimeout() time.Duration
-	GetRenewRetry() int
+	GetRenewRetry() uint
+	GetRenewRetryDelay() time.Duration
 	GetSegmentDuration() time.Duration
 	GetMinQuantum() uint64
 	GetMaxQuantum() uint64

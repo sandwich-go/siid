@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/sandwich-go/boost/retry"
 	"github.com/sandwich-go/boost/xsync"
 	"github.com/sandwich-go/boost/z"
 	"github.com/sandwich-go/logbus/glog"
@@ -235,23 +236,6 @@ func nextQuantum(lastQuantum uint64, segmentTime z.MonoTimeDuration, segmentDura
 	return nq
 }
 
-func retry(fn func(attempt int) (retry bool, err error)) error {
-	var err error
-	var shouldContinue bool
-	attempt := 1
-	for {
-		shouldContinue, err = fn(attempt)
-		if err == nil {
-			break
-		}
-		attempt++
-		if !shouldContinue {
-			return fmt.Errorf("exceeded retry limit - %v", err)
-		}
-	}
-	return err
-}
-
 func (e *engine) preRenew() (quantum uint64, begin z.MonoTimeDuration) {
 	begin = z.MonoOffset()
 	quantum = nextQuantum(e.quantum, e.ts,
@@ -269,10 +253,10 @@ func (e *engine) postRenew(quantum uint64, begin z.MonoTimeDuration, err error) 
 func (e *engine) renewWithUnlock() {
 	defer e.renewMutex.Unlock()
 	quantum, begin := e.preRenew()
-	e.postRenew(quantum, begin, retry(func(attempt int) (bool, error) {
+	e.postRenew(quantum, begin, retry.Do(func(attempt uint) error {
 		defer func() {
 			if r := recover(); r != nil {
-				glog.Error(w("renew panic"), glog.Int("attempt", attempt), glog.String("domain", e.domain),
+				glog.Error(w("renew panic"), glog.Uint("attempt", attempt), glog.String("domain", e.domain),
 					glog.Any("recover", r))
 			}
 		}()
@@ -280,16 +264,17 @@ func (e *engine) renewWithUnlock() {
 		defer cancel()
 		c, err := e.builder.driver.Renew(ctx, e.domain, quantum, e.builder.visitor.GetOffsetWhenAutoCreateDomain())
 		if err != nil {
-			if delay := e.builder.visitor.GetRenewRetryDelay()(attempt); delay != 0 {
-				time.Sleep(delay)
-			}
-		} else {
-			e.nextN = c
-			e.nextMax = c + quantum
-			e.nextQuantum = quantum
+			return err
 		}
-		return attempt < e.builder.visitor.GetRenewRetry(), err
-	}))
+		e.nextN = c
+		e.nextMax = c + quantum
+		e.nextQuantum = quantum
+		return nil
+	},
+		retry.WithLimit(e.builder.visitor.GetRenewRetry()),
+		retry.WithDelayType(func(n uint, _ error, _ *retry.Options) time.Duration {
+			return time.Duration(n) * e.builder.visitor.GetRenewRetryDelay()
+		})))
 }
 
 func (e *engine) nextOne() (uint64, error) {
