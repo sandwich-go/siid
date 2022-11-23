@@ -10,10 +10,10 @@ import (
 
 func BenchmarkSIID_MySQL(b *testing.B) {
 	initBenchmark()
-	bd := New(mysqlDriverName,
+	bd := New(mysqlDriverName, NewConfig(
 		WithDevelopment(false),
 		WithEnableMonitor(false),
-		WithMaxQuantum(900000),
+		WithMaxQuantum(900000)),
 	)
 	if err := bd.Prepare(context.Background()); err != nil {
 		b.Fatal(err)
