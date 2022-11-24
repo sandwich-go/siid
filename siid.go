@@ -29,6 +29,10 @@ type Builder interface {
 	// Build 建立Engine（新建或者返回已存在的Engine）
 	// domain 域，每种类型id，都拥有一个固定的域名，例如`player`
 	Build(domain string) (Engine, error)
+
+	// BuildWithOffset 建立Engine（新建或者返回已存在的Engine）
+	// domain 域，每种类型id，都拥有一个固定的域名，例如`player`
+	BuildWithOffset(domain string, offsetOnCreate uint64) (Engine, error)
 }
 
 type Engine interface {

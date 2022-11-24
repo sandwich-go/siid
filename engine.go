@@ -91,7 +91,7 @@ func NewWithDriver(driver Driver, opts *Options) Builder {
 
 type engineGetter func() Engine
 
-func (b *builder) getEngineGetterByDomain(domain string) engineGetter {
+func (b *builder) getEngineGetterByDomain(domain string, offsetOnCreate uint64) engineGetter {
 	if f, ok := b.engineGetters.Load(domain); ok {
 		return f.(engineGetter)
 	}
@@ -106,7 +106,7 @@ func (b *builder) getEngineGetterByDomain(domain string) engineGetter {
 	if loaded {
 		return f.(engineGetter)
 	}
-	e = &engine{builder: b, domain: domain}
+	e = &engine{builder: b, domain: domain, offsetOnCreate: offsetOnCreate}
 	wg.Done()
 	getter := func() Engine {
 		return e
@@ -126,10 +126,17 @@ func (b *builder) checkAvailableFlag() error {
 }
 
 func (b *builder) Build(domain string) (Engine, error) {
+	return b.BuildWithOffset(domain, 0)
+}
+
+func (b *builder) BuildWithOffset(domain string, offsetOnCreate uint64) (Engine, error) {
 	if err := b.checkAvailableFlag(); err != nil {
 		return nil, err
 	}
-	return b.getEngineGetterByDomain(domain)(), nil
+	if offsetOnCreate == 0 {
+		offsetOnCreate = b.visitor.GetOffsetWhenAutoCreateDomain()
+	}
+	return b.getEngineGetterByDomain(domain, offsetOnCreate)(), nil
 }
 
 func (b *builder) Prepare(ctx context.Context) error {
@@ -150,8 +157,9 @@ func (b *builder) Destroy(ctx context.Context) error {
 }
 
 type engine struct {
-	builder *builder
-	domain  string
+	builder        *builder
+	domain         string
+	offsetOnCreate uint64
 
 	// current
 	n        uint64 // 当前值
@@ -266,7 +274,7 @@ func (e *engine) renewWithUnlock() {
 		}()
 		ctx, cancel := context.WithTimeout(context.Background(), e.builder.visitor.GetRenewTimeout())
 		defer cancel()
-		c, err := e.builder.driver.Renew(ctx, e.domain, quantum, e.builder.visitor.GetOffsetWhenAutoCreateDomain())
+		c, err := e.builder.driver.Renew(ctx, e.domain, quantum, e.offsetOnCreate)
 		if err != nil {
 			return err
 		}
