@@ -1,19 +1,52 @@
-package siid
+package bench
 
 import (
 	"context"
+	"database/sql"
+	"fmt"
 	"github.com/bwmarrin/snowflake"
+	_ "github.com/go-sql-driver/mysql"
+	"github.com/sandwich-go/siid"
 	uuid "github.com/satori/go.uuid"
 	"math/rand"
+	"sync"
 	"testing"
+	"time"
 )
+
+var (
+	once                          sync.Once
+	mysqlDriverName, mysqlAddress = "mysql", "127.0.0.1:3306"
+)
+
+func initBenchmark() {
+	once.Do(func() {
+		siid.Register(mysqlDriverName, getMysqlDriver(mysqlAddress))
+	})
+}
+
+func getMysqlDriver(address string) siid.Driver {
+	url := fmt.Sprintf("root:@tcp(%s)/mysql?charset=utf8", address)
+	if db, err := sql.Open("mysql", url); err != nil {
+		panic(err)
+	} else {
+		if err = db.Ping(); err != nil {
+			panic(err)
+		}
+		driver := siid.NewMysqlDriver(db)
+		if err = driver.Prepare(context.Background()); err != nil {
+			panic(err)
+		}
+		return driver
+	}
+}
 
 func BenchmarkSIID_MySQL(b *testing.B) {
 	initBenchmark()
-	bd := New(mysqlDriverName, NewConfig(
-		WithDevelopment(false),
-		WithEnableMonitor(false),
-		WithMaxQuantum(900000)),
+	bd := siid.New(mysqlDriverName, siid.NewConfig(
+		siid.WithDevelopment(false),
+		siid.WithEnableMonitor(false),
+		siid.WithMaxQuantum(900000)),
 	)
 	if err := bd.Prepare(context.Background()); err != nil {
 		b.Fatal(err)
@@ -41,7 +74,7 @@ func BenchmarkTimestamp(b *testing.B) {
 	b.ResetTimer()
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		nowFunc().Nanosecond()
+		time.Now().Nanosecond()
 	}
 }
 
