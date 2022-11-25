@@ -33,6 +33,9 @@ type Builder interface {
 	// BuildWithOffset 建立Engine（新建或者返回已存在的Engine）
 	// domain 域，每种类型id，都拥有一个固定的域名，例如`player`
 	BuildWithOffset(domain string, offsetOnCreate uint64) (Engine, error)
+
+	// Range 遍历当前存在的所有的 domain 对应的 Engine
+	Range(func(domain string, engine Engine) bool)
 }
 
 type Engine interface {

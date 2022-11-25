@@ -29,6 +29,7 @@ func NewMongoDriverWithName(client *mongo.Client, dbName, collectionName string)
 }
 
 func (m *mongoDriver) Prepare(ctx context.Context) error { return m.pingPrimary(ctx) }
+func (m *mongoDriver) Ping(ctx context.Context) error    { return m.pingPrimary(ctx) }
 func (m *mongoDriver) pingPrimary(ctx context.Context) error {
 	var cancel context.CancelFunc
 	ctx, cancel = wrapperContext(ctx)

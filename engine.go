@@ -91,6 +91,12 @@ func NewWithDriver(driver Driver, opts *Options) Builder {
 
 type engineGetter func() Engine
 
+func (b *builder) Range(f func(domain string, engine Engine) bool) {
+	b.engineGetters.Range(func(key, value interface{}) bool {
+		return f(key.(string), value.(engineGetter)())
+	})
+}
+
 func (b *builder) getEngineGetterByDomain(domain string, offsetOnCreate uint64) engineGetter {
 	if f, ok := b.engineGetters.Load(domain); ok {
 		return f.(engineGetter)

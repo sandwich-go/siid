@@ -14,6 +14,7 @@ func newDummyDriver() Driver {
 	return &dummyDriver{mm: make(map[string]uint64)}
 }
 func (d *dummyDriver) Prepare(_ context.Context) error { return nil }
+func (d *dummyDriver) Ping(_ context.Context) error    { return nil }
 func (d *dummyDriver) Destroy(_ context.Context) error { return nil }
 func (d *dummyDriver) Renew(_ context.Context, domain string, quantum, offset uint64) (uint64, error) {
 	d.mx.Lock()

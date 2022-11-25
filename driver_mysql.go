@@ -62,6 +62,13 @@ func (d *mysqlDriver) Prepare(ctx context.Context) (err error) {
 	return err
 }
 
+func (d *mysqlDriver) Ping(ctx context.Context) error {
+	var cancel context.CancelFunc
+	ctx, cancel = wrapperContext(ctx)
+	err := d.db.PingContext(ctx)
+	cancel()
+	return err
+}
 func (d *mysqlDriver) Destroy(_ context.Context) error { return d.db.Close() }
 func (d *mysqlDriver) Renew(ctx context.Context, domain string, quantum, offsetOnCreate uint64) (uint64, error) {
 	var cancel context.CancelFunc
