@@ -213,7 +213,7 @@ func (e *engine) NextN(n int) (uint64, error) {
 	var id uint64
 	// 需要优化,todo
 	for i := 0; i < n; i++ {
-		id, err = e.nextOne()
+		id, err = e.safeNextOne()
 		if err != nil {
 			break
 		}
@@ -268,10 +268,10 @@ func (e *engine) postRenew(quantum uint64, begin z.MonoTimeDuration, err error) 
 	e.renewReport(quantum, begin, err)
 }
 
-func (e *engine) renewWithUnlock() {
+func (e *engine) renewWithUnlock() error {
 	defer e.renewMutex.Unlock()
 	quantum, begin := e.preRenew()
-	e.postRenew(quantum, begin, retry.Do(func(attempt uint) (errRetry error) {
+	err := retry.Do(func(attempt uint) (errRetry error) {
 		defer func() {
 			if r := recover(); r != nil {
 				errRetry = fmt.Errorf("panic %v", r)
@@ -294,16 +294,30 @@ func (e *engine) renewWithUnlock() {
 		retry.WithLimit(e.builder.visitor.GetRenewRetry()),
 		retry.WithDelayType(func(n uint, _ error, _ *retry.Options) time.Duration {
 			return time.Duration(n) * e.builder.visitor.GetRenewRetryDelay()
-		})))
+		}))
+	e.postRenew(quantum, begin, err)
+	return err
+}
+
+func (e *engine) safeNextOne() (uint64, error) {
+	id, err := e.nextOne()
+	if err != nil && err == ErrIdRunOut {
+		logbus.Warn(w("retry renew"), logbus.String("reason", "id run out"), logbus.String("domain", e.domain))
+		e.renewMutex.Lock()
+		if err0 := e.renewWithUnlock(); err0 == nil {
+			id, err = e.nextOne()
+		}
+	}
+	return id, err
 }
 
 func (e *engine) nextOne() (uint64, error) {
 	if e.n == e.critical {
 		e.renewMutex.Lock()
 		if e.n == 0 {
-			e.renewWithUnlock()
+			_ = e.renewWithUnlock()
 		} else {
-			go e.renewWithUnlock()
+			go func() { _ = e.renewWithUnlock() }()
 		}
 	}
 	if e.max < e.n+1 {
