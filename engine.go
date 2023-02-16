@@ -271,9 +271,10 @@ func (e *engine) postRenew(quantum uint64, begin z.MonoTimeDuration, err error) 
 func (e *engine) renewWithUnlock() {
 	defer e.renewMutex.Unlock()
 	quantum, begin := e.preRenew()
-	e.postRenew(quantum, begin, retry.Do(func(attempt uint) error {
+	e.postRenew(quantum, begin, retry.Do(func(attempt uint) (errRetry error) {
 		defer func() {
 			if r := recover(); r != nil {
+				errRetry = fmt.Errorf("panic %v", r)
 				logbus.Error(w("renew panic"), logbus.Uint("attempt", attempt), logbus.String("domain", e.domain),
 					logbus.Any("recover", r))
 			}
@@ -282,7 +283,8 @@ func (e *engine) renewWithUnlock() {
 		defer cancel()
 		c, err := e.builder.driver.Renew(ctx, e.domain, quantum, e.offsetOnCreate)
 		if err != nil {
-			return err
+			errRetry = err
+			return errRetry
 		}
 		e.nextN = c
 		e.nextMax = c + quantum
@@ -325,6 +327,7 @@ func (e *engine) nextOne() (uint64, error) {
 		}
 		e.critical = e.n + renewCount
 		e.nextMax = 0
+		e.nextN = 0
 	}
 	e.n++
 	e.leftReport()
