@@ -209,13 +209,24 @@ func (e *engine) NextN(n int) (uint64, error) {
 	now := z.MonoOffset()
 	// lock-free swap current and next ID bucket if we really really really really really need that
 	e.nextMutex.Lock()
+	var step = uint64(n)
 	var err error
 	var id uint64
 	// 需要优化,todo
-	for i := 0; i < n; i++ {
-		id, err = e.safeNextOne()
-		if err != nil {
-			break
+	if step > 1 && e.max < e.n+step {
+		// 不连续，需要连续的段
+		e.renewMutex.Lock()
+		err = e.renewWithUnlock(step)
+		if err == nil {
+			e.n = e.max
+		}
+	}
+	if err == nil {
+		for i := 0; i < n; i++ {
+			id, err = e.safeNextOne()
+			if err != nil {
+				break
+			}
 		}
 	}
 	e.nextMutex.Unlock()
@@ -254,13 +265,17 @@ func nextQuantum(lastQuantum uint64, segmentTime z.MonoTimeDuration, segmentDura
 	return nq
 }
 
-func (e *engine) preRenew() (quantum uint64, begin z.MonoTimeDuration) {
+func (e *engine) preRenew(oneStep ...uint64) (quantum uint64, begin z.MonoTimeDuration) {
 	begin = z.MonoOffset()
-	quantum = nextQuantum(e.quantum, e.ts,
-		e.builder.visitor.GetSegmentDuration(),
-		e.builder.visitor.GetMinQuantum(),
-		e.builder.visitor.GetMaxQuantum(),
-	)
+	if len(oneStep) > 0 {
+		quantum = oneStep[0]
+	} else {
+		quantum = nextQuantum(e.quantum, e.ts,
+			e.builder.visitor.GetSegmentDuration(),
+			e.builder.visitor.GetMinQuantum(),
+			e.builder.visitor.GetMaxQuantum(),
+		)
+	}
 	return
 }
 
@@ -268,9 +283,9 @@ func (e *engine) postRenew(quantum uint64, begin z.MonoTimeDuration, err error) 
 	e.renewReport(quantum, begin, err)
 }
 
-func (e *engine) renewWithUnlock() error {
+func (e *engine) renewWithUnlock(oneStep ...uint64) error {
 	defer e.renewMutex.Unlock()
-	quantum, begin := e.preRenew()
+	quantum, begin := e.preRenew(oneStep...)
 	err := retry.Do(func(attempt uint) (errRetry error) {
 		defer func() {
 			if r := recover(); r != nil {
