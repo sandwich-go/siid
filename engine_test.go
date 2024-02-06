@@ -71,6 +71,20 @@ func TestSIID(t *testing.T) {
 		So(s.RenewErrCount, ShouldBeZeroValue)
 		So(s.RenewCount, ShouldNotBeZeroValue)
 
+		id, err = e.(*engine).NextN(2)
+		So(err, ShouldBeNil)
+		So(id, ShouldEqual, s.Current+2)
+		t.Log(id)
+
+		id, err = e.(*engine).NextN(5000)
+		So(err, ShouldBeNil)
+		t.Log(id)
+		for i := 0; i < int(quantum)/2; i++ {
+			id, err = e.Next()
+			So(err, ShouldBeNil)
+		}
+		t.Log(id)
+
 		err = b.Destroy(context.Background())
 		So(err, ShouldBeNil)
 		err = b.Destroy(context.Background())
