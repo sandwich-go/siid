@@ -280,8 +280,10 @@ func (e *engine) preRenew(oneStep ...uint64) (quantum uint64, begin z.MonoTimeDu
 }
 
 func (e *engine) postRenew(quantum uint64, begin z.MonoTimeDuration, err error) {
+	if err != nil {
+		logbus.Error(w("renew failed"), logbus.String("domain", e.domain), logbus.ErrorField(err))
+	}
 	e.renewReport(quantum, begin, err)
-	logbus.Error(w("renew failed"), logbus.String("domain", e.domain), logbus.ErrorField(err))
 }
 
 func (e *engine) renewWithUnlock(oneStep ...uint64) error {
