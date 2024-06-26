@@ -281,6 +281,7 @@ func (e *engine) preRenew(oneStep ...uint64) (quantum uint64, begin z.MonoTimeDu
 
 func (e *engine) postRenew(quantum uint64, begin z.MonoTimeDuration, err error) {
 	e.renewReport(quantum, begin, err)
+	logbus.Error(w("renew failed"), logbus.String("domain", e.domain), logbus.ErrorField(err))
 }
 
 func (e *engine) renewWithUnlock(oneStep ...uint64) error {
@@ -315,18 +316,18 @@ func (e *engine) renewWithUnlock(oneStep ...uint64) error {
 }
 
 func (e *engine) safeNextOne() (uint64, error) {
-	id, err := e.nextOne()
-	if err != nil && err == ErrIdRunOut {
+	id, err := e.nextOne(0)
+	if err != nil && errors.Is(err, ErrIdRunOut) {
 		logbus.Warn(w("retry renew"), logbus.String("reason", "id run out"), logbus.String("domain", e.domain))
 		e.renewMutex.Lock()
 		if err0 := e.renewWithUnlock(); err0 == nil {
-			id, err = e.nextOne()
+			id, err = e.nextOne(1)
 		}
 	}
 	return id, err
 }
 
-func (e *engine) nextOne() (uint64, error) {
+func (e *engine) nextOne(times uint64) (uint64, error) {
 	if e.n == e.critical {
 		e.renewMutex.Lock()
 		if e.n == 0 {
@@ -340,7 +341,9 @@ func (e *engine) nextOne() (uint64, error) {
 		e.renewMutex.Lock()
 		defer e.renewMutex.Unlock()
 		if e.nextMax == 0 {
-			logbus.Error(w("next failed"), logbus.String("reason", "id run out"), logbus.String("domain", e.domain))
+			if times > 0 {
+				logbus.Error(w("next failed"), logbus.String("reason", "id run out"), logbus.String("domain", e.domain))
+			}
 			return 0, ErrIdRunOut
 		}
 		e.n = e.nextN
