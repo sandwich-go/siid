@@ -213,7 +213,7 @@ func (e *engine) NextN(n int) (uint64, error) {
 	var err error
 	var id uint64
 	// 需要优化,todo
-	if step > 1 && e.max < e.n+step {
+	if e.n > 0 && step > 1 && e.max < e.n+step {
 		// 不连续，需要连续的段
 		e.renewMutex.Lock()
 		err = e.renewWithUnlock(step)
@@ -268,7 +268,14 @@ func nextQuantum(lastQuantum uint64, segmentTime z.MonoTimeDuration, segmentDura
 func (e *engine) preRenew(oneStep ...uint64) (quantum uint64, begin z.MonoTimeDuration) {
 	begin = z.MonoOffset()
 	if len(oneStep) > 0 {
-		quantum = oneStep[0]
+		quantum = nextQuantum(e.quantum, e.ts,
+			e.builder.visitor.GetSegmentDuration(),
+			e.builder.visitor.GetMinQuantum(),
+			e.builder.visitor.GetMaxQuantum(),
+		)
+		if quantum < oneStep[0] {
+			quantum = oneStep[0]
+		}
 	} else {
 		quantum = nextQuantum(e.quantum, e.ts,
 			e.builder.visitor.GetSegmentDuration(),
