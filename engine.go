@@ -19,7 +19,7 @@ const (
 	driverFlagClosed              // driver已关闭
 )
 
-const Version = "1.3.6"
+const Version = "1.3.7"
 
 var (
 	driversMu sync.RWMutex
