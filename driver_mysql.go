@@ -31,17 +31,28 @@ const (
 
 var emptyCancelFunc = context.CancelFunc(func() {})
 
+// SqlDB 抽象了 mysqlDriver 所依赖的 *sql.DB 行为,
+// 便于在测试中替换为 mock 实现,或对接其他兼容 database/sql 的实现。
+type SqlDB interface {
+	PingContext(ctx context.Context) error
+	ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
+	QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error)
+	Exec(query string, args ...interface{}) (sql.Result, error)
+	BeginTx(ctx context.Context, opts *sql.TxOptions) (*sql.Tx, error)
+	Close() error
+}
+
 type mysqlDriver struct {
 	dbName, tableName string
-	db                *sql.DB
+	db                SqlDB
 	onLockOk          func()
 }
 
-func NewMysqlDriver(client *sql.DB) Driver {
+func NewMysqlDriver(client SqlDB) Driver {
 	return NewMysqlDriverWithName(client, defaultName, defaultName)
 }
 
-func NewMysqlDriverWithName(client *sql.DB, dbName, tableName string) Driver {
+func NewMysqlDriverWithName(client SqlDB, dbName, tableName string) Driver {
 	return &mysqlDriver{db: client, dbName: dbName, tableName: tableName}
 }
 
