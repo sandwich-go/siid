@@ -36,7 +36,6 @@ var emptyCancelFunc = context.CancelFunc(func() {})
 type SqlDB interface {
 	PingContext(ctx context.Context) error
 	ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
-	QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error)
 	Exec(query string, args ...interface{}) (sql.Result, error)
 	BeginTx(ctx context.Context, opts *sql.TxOptions) (*sql.Tx, error)
 	Close() error
